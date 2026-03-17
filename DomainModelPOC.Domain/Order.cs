@@ -47,7 +47,7 @@ public sealed class Order(Guid id, Customer customer, DateTimeOffset placedAt)
         new(Guid.CreateVersion7(), customer, DateTimeOffset.UtcNow);
 }
 
-// -----------------------------------------------------------
+// ----------------------------------------------------------
 // C# 14: Primary constructor — all state via constructor params
 // 'readonly' fields are inlined; no boilerplate assignments.
 // -----------------------------------------------------------

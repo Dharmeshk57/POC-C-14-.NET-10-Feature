@@ -6,7 +6,7 @@ using DomainModelPOC.Application;
 using Xunit; 
 public class OrderTests
 {
-    // --- Feature: field keyword (property accessor) --
+    // --- Feature: field keyword (property accessor) -
 
     [Fact]
     public void Order_Status_RejectsInvalidTransition()

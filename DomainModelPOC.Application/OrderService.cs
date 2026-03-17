@@ -5,7 +5,7 @@ using DomainModelPOC.Domain;
 // -----------------------------------------------------------
 // C# 14: Primary constructor in a service class
 // Dependencies are concise — no constructor body noise.
-// -----------------------------------------------------------
+// ----------------------------------------------------------
 public sealed class OrderService(IOrderRepository repository, TimeProvider clock)
 {
     // C# 14: Collection expressions with spread operator
