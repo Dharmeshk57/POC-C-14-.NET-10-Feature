@@ -1,0 +1,19 @@
+## .NET / Visual Studio
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.vsidx
+*.lock.json
+TestResults/
+*.coverage
+*.coveragexml
+
+## JetBrains Rider
+.idea/
+*.sln.iml
+
+## OS
+.DS_Store
+Thumbs.db

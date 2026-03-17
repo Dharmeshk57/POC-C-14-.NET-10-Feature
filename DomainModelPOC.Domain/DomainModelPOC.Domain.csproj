@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>preview</LangVersion>
+    <RootNamespace>DomainModelPOC.Domain</RootNamespace>
+    <AssemblyName>DomainModelPOC.Domain</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="GlobalUsings.cs" />
+  </ItemGroup>
+</Project>
