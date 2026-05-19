@@ -6,6 +6,7 @@ public sealed class Order(Guid id, Customer customer, DateTimeOffset placedAt)
     public Customer Customer { get; } = customer;
     public DateTimeOffset PlacedAt { get; } = placedAt;
     public DateTimeOffset CreatedDT { get; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset? UpdatedDT { get; private set; }  = DateTimeOffset.UtcNow;
     public OrderStatus Status
     {
         get;
