@@ -42,38 +42,57 @@ public sealed class OrderService(IOrderRepository repository, TimeProvider clock
         await repository.SaveAsync(order, ct);
     }
 
-    // LINQ v3: CountBy, AggregateBy, Index
+    // Single-pass summary for lower allocations and less repeated work
     public async Task<OrderSummary> GetSummaryAsync(CancellationToken ct = default)
     {
         var orders = await repository.GetAllAsync(ct);
+        var countByStatus = new Dictionary<OrderStatus, int>();
+        var revenueByCustomer = new Dictionary<string, Money>(StringComparer.Ordinal);
+        var recent = new List<Order>(10);
+        var active = 0;
 
-        // .NET 10 LINQ: CountBy — group-count without full GroupBy overhead
-        var countByStatus = orders
-            .CountBy(o => o.Status)
-            .ToDictionary(kv => kv.Key.DisplayLabel(), kv => kv.Value);
+        foreach (var order in orders)
+        {
+            if (ActiveStatuses.Contains(order.Status))
+                active++;
 
-        // .NET 10 LINQ: AggregateBy — keyed accumulation in one pass
-        var revenueByCustomer = orders
-            .AggregateBy(
-                o => o.Customer.FullName,
-                Money.Zero,
-                (acc, o) => acc + o.TotalAmount)
-            .ToDictionary(kv => kv.Key, kv => kv.Value);
+            countByStatus[order.Status] =
+                countByStatus.TryGetValue(order.Status, out var statusCount)
+                    ? statusCount + 1
+                    : 1;
 
-        // .NET 10 LINQ: Index — enumerate with index without manual counter
-        var recentOrders = orders
-            .OrderByDescending(o => o.PlacedAt)
-            .Take(10)
-            .Index()                              // returns (int Index, T Item)
-            .Select(x => $"#{x.Index + 1} — {x.Item.Id} ({x.Item.Status.DisplayLabel()})")
+            revenueByCustomer[order.Customer.FullName] =
+                revenueByCustomer.TryGetValue(order.Customer.FullName, out var total)
+                    ? total + order.TotalAmount
+                    : order.TotalAmount;
+
+            InsertRecentOrder(order, recent);
+        }
+
+        var recentOrders = recent
+            .Select((order, index) => $"#{index + 1} — {order.Id} ({order.Status.DisplayLabel()})")
             .ToList();
 
         return new OrderSummary(
             TotalOrders: orders.Count,
-            Active: orders.Count(o => ActiveStatuses.Contains(o.Status)),
-            CountByStatus: countByStatus,
+            Active: active,
+            CountByStatus: countByStatus.ToDictionary(kv => kv.Key.DisplayLabel(), kv => kv.Value),
             RevenueByCustomer: revenueByCustomer,
             RecentOrders: recentOrders);
+    }
+
+    private static void InsertRecentOrder(Order order, List<Order> recent)
+    {
+        var index = recent.FindIndex(existing => order.PlacedAt > existing.PlacedAt);
+        if (index < 0)
+            index = recent.Count;
+
+        if (index >= 10)
+            return;
+
+        recent.Insert(index, order);
+        if (recent.Count > 10)
+            recent.RemoveAt(10);
     }
 }
 

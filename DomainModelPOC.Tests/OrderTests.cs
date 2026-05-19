@@ -149,6 +149,28 @@ public class OrderTests
         Assert.StartsWith("#1", summary.RecentOrders[0]);
     }
 
+    [Fact]
+    public async Task OrderService_Summary_RecentOrders_LimitsToTen()
+    {
+        var repo = new InMemoryOrderRepository();
+        var service = new OrderService(repo, TimeProvider.System);
+        var customer = Customer.New("Perf", "Test", "perf@example.com");
+        var line = new OrderLine(Guid.NewGuid(), "Book", 1, new Money(15m));
+
+        for (var i = 0; i < 12; i++)
+        {
+            var order = Order.New(customer);
+            order.AddLines(line);
+            await repo.SaveAsync(order);
+        }
+
+        var summary = await service.GetSummaryAsync();
+
+        Assert.Equal(10, summary.RecentOrders.Count);
+        Assert.StartsWith("#1", summary.RecentOrders[0]);
+        Assert.StartsWith("#10", summary.RecentOrders[^1]);
+    }
+
     // --- Feature: Primary constructor on service class ---
 
     [Fact]
