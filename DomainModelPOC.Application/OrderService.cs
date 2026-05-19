@@ -8,9 +8,13 @@ using DomainModelPOC.Domain;
 // ----------------------------------------------------------
 public sealed class OrderService(IOrderRepository repository, TimeProvider clock)
 {
+    private const int MaxRecentOrderCount = 10;
+
     // C# 14: Collection expressions with spread operator
     private static readonly HashSet<OrderStatus> ActiveStatuses =
         [OrderStatus.Submitted, OrderStatus.Processing, OrderStatus.Shipped];
+    private static readonly IComparer<Order> RecentOrderComparer =
+        Comparer<Order>.Create((left, right) => right.PlacedAt.CompareTo(left.PlacedAt));
 
     public async Task<Order> CreateOrderAsync(
         Customer customer,
@@ -48,7 +52,7 @@ public sealed class OrderService(IOrderRepository repository, TimeProvider clock
         var orders = await repository.GetAllAsync(ct);
         var countByStatus = new Dictionary<OrderStatus, int>();
         var revenueByCustomer = new Dictionary<string, Money>(StringComparer.Ordinal);
-        var recent = new List<Order>(10);
+        var recent = new List<Order>(MaxRecentOrderCount);
         var active = 0;
 
         foreach (var order in orders)
@@ -83,16 +87,17 @@ public sealed class OrderService(IOrderRepository repository, TimeProvider clock
 
     private static void InsertRecentOrder(Order order, List<Order> recent)
     {
-        var index = recent.FindIndex(existing => order.PlacedAt > existing.PlacedAt);
+        var index = recent.BinarySearch(order, RecentOrderComparer);
         if (index < 0)
-            index = recent.Count;
+            index = ~index;
 
-        if (index >= 10)
+        if (index >= MaxRecentOrderCount)
             return;
 
+        if (recent.Count == MaxRecentOrderCount)
+            recent.RemoveAt(MaxRecentOrderCount - 1);
+
         recent.Insert(index, order);
-        if (recent.Count > 10)
-            recent.RemoveAt(10);
     }
 }
 
