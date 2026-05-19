@@ -149,6 +149,41 @@ public class OrderTests
         Assert.StartsWith("#1", summary.RecentOrders[0]);
     }
 
+    [Fact]
+    public async Task OrderService_Summary_RecentOrders_LimitsToTen()
+    {
+        const int maxRecentOrders = 10;
+        const int testOrderCount = 12;
+
+        var repo = new InMemoryOrderRepository();
+        var service = new OrderService(repo, TimeProvider.System);
+        var customer = Customer.New("Perf", "Test", "perf@example.com");
+        var line = new OrderLine(Guid.NewGuid(), "Book", 1, new Money(15m));
+        var placedAt = DateTimeOffset.UtcNow;
+        var orders = new List<Order>(testOrderCount);
+
+        for (var i = 0; i < testOrderCount; i++)
+        {
+            var order = new Order(Guid.CreateVersion7(), customer, placedAt.AddMinutes(i));
+            order.AddLines(line);
+            orders.Add(order);
+            await repo.SaveAsync(order);
+        }
+
+        var summary = await service.GetSummaryAsync();
+        var expectedRecentOrderIds = orders
+            .OrderByDescending(order => order.PlacedAt)
+            .Take(maxRecentOrders)
+            .Select(order => order.Id.ToString())
+            .ToList();
+
+        Assert.Equal(maxRecentOrders, summary.RecentOrders.Count);
+        Assert.StartsWith("#1", summary.RecentOrders[0]);
+        Assert.StartsWith($"#{maxRecentOrders}", summary.RecentOrders[^1]);
+        for (var i = 0; i < expectedRecentOrderIds.Count; i++)
+            Assert.Contains(expectedRecentOrderIds[i], summary.RecentOrders[i]);
+    }
+
     // --- Feature: Primary constructor on service class ---
 
     [Fact]
